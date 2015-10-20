@@ -28,23 +28,23 @@ public class Base {
 	public void compress(FileArray file) {	//TODO Add necessary exceptions to this declaration
 		//placeFileHead(file);			//Determined unnecessary - filename should just prefix the file
 		for(Bit[] unit : file.toChunkArray(chunkSize)) {	//TODO make this use filearray get() and set() instead
-			if(shouldImplicate()) {
+			if(shouldImplicate(unit)) {
 				implicate(unit,file);
 			} else {
 				placeData(unit);
 			}
 		}
 	}
-	private boolean shouldImplicate() {
+	private boolean shouldImplicate(Bit[] unit) {
 		if(currentCompressionRatio()<targetCompressionRatio) {
 			return true;
 		}
-		if(collision()) {
+		if(collision(2*unit.length)) {		//length of foot included TODO necessary?
 			return true;
 		}
 		return false;
 	}
-	private boolean collision() {
+	private boolean collision(int spacesNeeded) {
 		return false;
 	}
 	private double currentCompressionRatio() {
@@ -53,16 +53,14 @@ public class Base {
 	private void implicate(Bit[] unit, FileArray file) {
 		implications++;
 		placeFoot(file);
-		Integer error = null;
-		if(collision()) {
-			try {
-				error = probe();
-			}catch(Exception e) {
-				
-			}
+		int error = 0;
+		try {
+			error = probe();
+		}catch(Exception e) {
+			
 		}
 		placeHead(file);
-		if(error!=null) {
+		if(error!=0) {
 			placeError(error);
 		}
 	}
@@ -89,6 +87,11 @@ public class Base {
 		place(Bit.ONE,Bit.ZERO);
 		place(Bit.toBitArray(error));
 	}
+	/**
+	 * This will change the current slot to the first available spot
+	 * @return the distance traveled
+	 * @throws Exception
+	 */
 	private int probe() throws Exception{
 		return 0;
 	}
