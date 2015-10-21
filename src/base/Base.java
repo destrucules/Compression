@@ -42,7 +42,7 @@ public class Base {
 		int chunkCount = 0;
 		for(int i1=0,i2=unitSize;i2<=file.end();i1=i2,i2+=unitSize) {
 			Bit[] unit = file.get(i1,i2);
-			if(chunkCount >= chunkSize && shouldImplicate(unitSize)) {
+			if(chunkCount >= chunkSize && shouldImplicate()) {
 				implicate(unit,file);
 				chunkCount = 0;
 			} else {
@@ -51,16 +51,21 @@ public class Base {
 			}
 		}
 	}
-	private boolean shouldImplicate(int unitlength) {
+	private boolean shouldImplicate() {
 		if(currentCompressionRatio()<targetCompressionRatio) {
 			return true;
 		}
-		if(collision(2*unitlength)) {		//length of foot included TODO necessary?
+		if(collision(2*unitSize)) {
 			return true;
 		}
 		return false;
 	}
 	private boolean collision(int spacesNeeded) {
+		Bit[] next = filespace.get(currentSlot,currentSlot+spacesNeeded);
+		for(int i=0;i<next.length-1;) {
+			if(next[i].equals(Bit.ONE) || next[i+1].equals(Bit.ONE))return true;
+			i+=unitSize;
+		}
 		return false;
 	}
 	private double currentCompressionRatio() {
@@ -127,7 +132,7 @@ public class Base {
 	 * Returns the tag used to identify this file in this filespace
 	 */
 	private Bit[] tag(FileArray file) {
-		return null;
+		return null;	//TODO
 	}
 	private int value(Bit... unit) {
 		return 0;		//TODO

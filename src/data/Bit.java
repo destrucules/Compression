@@ -13,6 +13,6 @@ public enum Bit {
 		return value?1:0;
 	}
 	public static Bit[] toBitArray(int num) {
-		return null;
+		return null;	//TODO
 	}
 }
