@@ -2,6 +2,7 @@ package base;
 
 import fileIO.FileArray;
 import data.Bit;
+import org.apache.commons.collections4.bidimap.DualHashBidiMap;
 
 /**
  * This class contains the basic algorithm and is responsible for
@@ -9,18 +10,19 @@ import data.Bit;
  * @author Joshua Kauffman
  */
 public class Base {
-	double targetCompressionRatio;	//TODO Assign privacy modifiers to fields
+	private double targetCompressionRatio;
 	/**
 	 * This is the size of the chunks to be used - optimum performance occurs when chunk size approaches infinity
 	 * The algorithm breaks even (at best) when chunkSize = 2 and (at worst) when chunkSize = 3. Therefore,
 	 * to be useful, set chunkSize at at least 3 and, if possible, much, much higher than 3
 	 */
-	int chunkSize;
+	private int chunkSize;
 	/**
 	 * This is the size of the units, not including incremental metadata. Default is 8 bits, or 1 byte
 	 */
-	int unitSize;
-	FileArray filespace;
+	private int unitSize;
+	private FileArray filespace;
+	private DualHashBidiMap<Integer,Bit[]> filebase;
 	
 	private int currentSlot=0;
 	private int implications=0;
@@ -30,15 +32,41 @@ public class Base {
 		chunkSize=4;
 		unitSize=8;
 		this.filespace=filespace;
+		initFilebase();
 	}
 	public Base(FileArray filespace, double targetCompressionRatio, int chunkSize) {
 		this.targetCompressionRatio=targetCompressionRatio;
 		this.chunkSize=chunkSize;
 		this.filespace=filespace;
+		initFilebase();
 	}
-	public void compress(FileArray file) {	//TODO Add necessary exceptions to this declaration
-		//placeFileHead(file);			//Determined unnecessary - filename should just prefix the file
-		//TODO file.prefix(filename);
+	private void initFilebase() {
+		filebase = new DualHashBidiMap<>();
+		boolean inFile=false;	//tells if it is reading a new filename
+		java.util.LinkedList<Bit> filename = new java.util.LinkedList<>();
+		for(int i1=0,i2=unitSize+2;i2<=filespace.end();i1=i2,i2+=unitSize+2) {
+			Bit[] meta = filespace.get(i1, i1+2);
+			Bit[] data = filespace.get(i1+2,i2);
+			if(meta[0]==Bit.ZERO && meta[1]==Bit.ONE) {	//if a head/foot is found
+				int tag = value(data);
+				if(inFile) {
+					inFile=false;
+					//TODO calculate how many bits are extraneous (assuming bytes were used in the filename) and truncate
+					filebase.put(tag, filename.toArray(new Bit[0]));
+					filename.clear();
+				}else if(!filebase.containsKey(tag)) {
+					inFile=true;
+					filename.clear();
+				}
+			}else if(inFile) {
+				for(Bit b : data) {
+					filename.add(b);
+				}
+			}
+		}
+	}
+	public void compress(FileArray file) {
+		placeFileHead(file);
 		int chunkCount = 0;
 		for(int i1=0,i2=unitSize;i2<=file.end();i1=i2,i2+=unitSize) {
 			Bit[] unit = file.get(i1,i2);
@@ -50,6 +78,11 @@ public class Base {
 				chunkCount++;
 			}
 		}
+	}
+	private void placeFileHead(FileArray file) {
+		placeHead(file);
+		place(file.filename());
+		placeFoot(file);
 	}
 	private boolean shouldImplicate() {
 		if(currentCompressionRatio()<targetCompressionRatio) {
@@ -88,7 +121,25 @@ public class Base {
 		}
 	}
 	private boolean place(Bit... unit) {
-		return filespace.set(currentSlot, unit);
+		boolean success=true;
+		for(int i1=0,i2=unitSize;i1<unit.length;i1=i2,i2+=unitSize) {
+			if(i2<unit.length) {
+				for(int i=i1;i<i2;i++) {
+					success=success&&filespace.set(currentSlot, unit[i]);
+					currentSlot++;
+				}
+			} else {
+				for(int i=i1;i<unit.length;i++) {
+					success=success&&filespace.set(currentSlot, unit[i]);
+					currentSlot++;
+				}
+				for(int i=unit.length;i<i2;i++) {
+					success=success&&filespace.set(currentSlot, Bit.ZERO);
+					currentSlot++;
+				}
+			}
+		}
+		return success;
 	}
 	private void placeData(Bit... unit) {
 		total++;
@@ -132,9 +183,13 @@ public class Base {
 	 * Returns the tag used to identify this file in this filespace
 	 */
 	private Bit[] tag(FileArray file) {
-		return null;	//TODO
+		return Bit.toBitArray(filebase.getKey(file.filename()));
 	}
-	private int value(Bit... unit) {
-		return 0;		//TODO
+	private static int value(Bit... unit) {
+		int toR=0;
+		for(int i=0;i<unit.length;i++) {
+			toR += unit[unit.length-i-1].toInt()*Math.pow(2, i);
+		}
+		return toR;
 	}
 }

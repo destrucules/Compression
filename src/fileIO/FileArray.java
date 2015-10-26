@@ -3,7 +3,7 @@ package fileIO;
 import data.Bit;
 
 public class FileArray {
-	public Bit[] filename;
+	private Bit[] filename;
 	private int endAddress;
 	public FileArray() {
 		//TODO
@@ -22,5 +22,11 @@ public class FileArray {
 	}
 	public int end() {
 		return endAddress;
+	}
+	public Bit[] filename() {
+		return filename;
+	}
+	public void prefix(Bit... bits) {
+		//TODO
 	}
 }
